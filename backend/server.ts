@@ -1,60 +1,66 @@
-import { Elysia } from "elysia";
+import routes from "./utils/routes";
 
-interface Route {
-  path: string;
-  response: string;
-  location?: string;
+// Config du server
+const PORT = 3000;
+const HOST = "localhost";
+
+// Fonction pour servir des fichier HTML
+export async function serveHTML(filePath: string): Promise<Response> {
+  console.log("Trying to load:", filePath); // Debug
+  try {
+    const file = Bun.file(filePath);
+    if (await file.exists()) {
+      return new Response(file, { headers: { "Content-Type": "text/html" } });
+    }
+    console.error("File not found:", filePath); // Debug
+    return new Response("Page not found", { status: 404 });
+  } catch (error) {
+    console.error("Error loading HTML:", error); // Debug
+    return new Response("Internal Server Error", { status: 500 });
+  }
 }
 
-const racine: string = "http://localhost:5173"
+// Function pour servir des assets statiques
+async function serveStatic(
+  filePath: string,
+  contentType: string
+): Promise<Response> {
+  try {
+    const file = Bun.file(filePath);
+    if (await file.exists()) {
+      return new Response(file, {
+        headers: { "Content-Type": contentType },
+      });
+    }
+    return new Response("Not Found", { status: 404 });
+  } catch (error) {
+    return new Response("Internal Server Error", { status: 500 });
+  }
+}
 
-// Tableau des routes
-const routes: Route[] = [
-  { path: "/", response: "Page d'accueil", location: "" },
-  { path: "/developpement-web", response: "Développement Web", location: "" },
-  { path: "/vie-quotidienne", response: "Vie Quotidienne", location: "" },
-  { path: "/financier-trading", response: "Financier / Trading", location: "" },
-  { path: "/sport-et-fitness", response: "Sport et Fitness", location: "" },
-  {
-    path: "/technologie-et-innovation",
-    response: "Technologie et Innovation",
-    location: "",
-  },
-  {
-    path: "/education-et-apprentissage",
-    response: "Éducation et Apprentissage",
-    location: "",
-  },
-  { path: "/voyage-et-aventure", response: "Voyage et Aventure", location: "" },
-  { path: "/creativite-et-art", response: "Créativité et Art", location: "" },
-  { path: "/entrepreneuriat", response: "Entrepreneuriat", location: "" },
-  {
-    path: "/developpement-personnel",
-    response: "Développement Personnel",
-    location: "",
-  },
-  {
-    path: "/test",
-    response: "Ceci est un test",
-    location: "/index.html",
-  },
-];
+// Création du server
+const server = Bun.serve({
+  port: PORT,
+  hostname: HOST,
+  async fetch(req) {
+    const url = new URL(req.url);
+    const route = routes.find(
+      (r) =>
+        r.method === req.method &&
+        (typeof r.path === "string"
+          ? r.path === url.pathname
+          : r.path?.test(url.pathname))
+    );
 
-const app = new Elysia();
+    if(route && route.handler) {
+      return route.handler(req)
+    }
 
-// Configuration des routes
-routes.forEach((route) => {
-  if (route.location) {
-    // Si `location` est défini, on redirige
-    app.get(route.path, ({ redirect }) => {
-      return redirect(racine + route.location!);
-    });
-  } else {
-    // Sinon, on renvoie simplement la réponse
-    app.get(route.path, () => route.response);
+    return new Response ("Not Found", {status: 404})
+  },
+  error(error) {
+    return new Response ("Internal Server Error", {status: 500})
   }
 });
 
-app.listen(3000);
-
-console.log("Server is running on http://localhost:3000");
+console.log(`Server running at http://${server.hostname}:${server.port}`)

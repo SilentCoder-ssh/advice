@@ -1,15 +1,14 @@
 {
   "name": "backend",
   "module": "index.ts",
-  "type": "module",
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5.8.2"
+  },
   "scripts": {
     "dev": "bun --watch server.ts"
   },
-  "devDependencies": {
-    "@types/bun": "latest",
-    "elysia": "^1.2.25"
-  },
-  "peerDependencies": {
-    "typescript": "^5.0.0"
-  }
+  "type": "module"
 }
